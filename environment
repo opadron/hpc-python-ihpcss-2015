@@ -1,0 +1,14 @@
+#! /usr/bin/env bash
+
+module swap PrgEnv-cray PrgEnv-gnu
+module load bw-python
+
+echo
+(
+    echo 'exit()'                                  |
+    python -c 'import code ; code.interact()' 2>&1 |
+    head -n 2                                      |
+    egrep --color '(Blue Waters)?'
+)
+echo
+

@@ -1,51 +1,36 @@
 #! /usr/bin/env python
 
-import math
-import sys
-
-import numpy as np
+from sys import stdout
 from time import time
 
+import numpy as np
+
 COLUMNS    =              1000
-ROWS       =              1000
 COLUMNS_P1 = COLUMNS    +    1
-ROWS_P1    = ROWS       +    1
 COLUMNS_P2 = COLUMNS_P1 +    1
+
+ROWS       =              1000
+ROWS_P1    = ROWS       +    1
 ROWS_P2    = ROWS_P1    +    1
 
 MAX_TEMP_ERROR = 0.01
 dt = MAX_TEMP_ERROR*1.1
-
-shape = (ROWS_P2, COLUMNS_P2)
 
 max_iterations = int(raw_input('Maximum iterations [100-4000]?\n'))
 iteration = 1
 
 start_time = time()
 
-# initialize
-Temperature_last = np.zeros(shape)
-Temperature_last[:, -1] = (100.0/ROWS)*np.r_[:ROWS + 2]
-Temperature_last[-1, :] = (100.0/COLUMNS)*np.r_[:COLUMNS + 2]
-
-Temperature = np.empty_like(Temperature_last)
+# initialize Temperature_last and Temperature <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 # do until error is minimal or until max steps
 while ( dt > MAX_TEMP_ERROR and iteration <= max_iterations ):
-    # main calculation: average my four neighbors
-    Temperature[1:-1, 1:-1] = 0.25*(
-        Temperature_last[2:  , 1:-1] +
-        Temperature_last[ :-2, 1:-1] +
-        Temperature_last[1:-1, 2:  ] +
-        Temperature_last[1:-1,  :-2]
-    )
 
-    dt = np.max(np.fabs(
-        Temperature[1:-1, 1:-1] - Temperature_last[1:-1, 1:-1]
-    ))
+    # main calculation: average my four neighbors <<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    # copy grid to old grid for next iteration
-    Temperature_last[1:-1, 1:-1] = Temperature[1:-1, 1:-1]
+    # compute dt = maximum difference <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+    # copy grid to old grid for next iteration <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     # periodically print test values
     if iteration % 100 == 0:
@@ -53,19 +38,14 @@ while ( dt > MAX_TEMP_ERROR and iteration <= max_iterations ):
         print('---------- Iteration number: %d ------------' % iteration)
 
         for i in range(ROWS - 5, ROWS + 1):
-            sys.stdout.write(
-                '[%d,%d]: %5.2f  ' % (
-                    i, i, Temperature[i, i]
-                )
-            )
+            stdout.write('[%d,%d]: %5.2f  ' % (i, i, Temperature[i, i]))
 
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        stdout.write('\n')
+        stdout.flush()
 
     iteration += 1
 
 stop_time = time()
-
 elapsed_time = stop_time - start_time
 
 print('\nMax error at iteration %d was %f' % (iteration-1, dt))

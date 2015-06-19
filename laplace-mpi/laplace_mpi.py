@@ -1,94 +1,51 @@
 #! /usr/bin/env python
 
-import math
-import sys
-
+from sys import stdout
+from time import time
 
 import itertools as it
+
 import numpy as np
-from time import time
 from mpi4py import MPI
 
-COLUMNS = 1000
-ROWS = 1000
+COLUMNS    =              1000
+COLUMNS_P1 = COLUMNS    +    1
+COLUMNS_P2 = COLUMNS_P1 +    1
 
 comm = MPI.COMM_WORLD
 
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-START_ROW = (ROWS*rank)//size
-END_ROW = (ROWS*(rank + 1))//size
+ROWS       =              1000
+START_ROW  = (ROWS*rank       )//size
+END_ROW    = (ROWS*rank + ROWS)//size
+
 LOCAL_ROWS = END_ROW - START_ROW
+LOCAL_ROWS_P1 = LOCAL_ROWS    + 1
+LOCAL_ROWS_P2 = LOCAL_ROWS_P1 + 1
 
 MAX_TEMP_ERROR = 0.01
-
-shape = (LOCAL_ROWS + 2, COLUMNS + 2)
-
-iteration = 1
-
 local_dt = np.empty(1)
 global_dt = np.empty(1)
-global_dt[0] = 100
+global_dt[0] = MAX_TEMP_ERROR*1.1
 
 max_iterations = None
 if rank == 0:
     max_iterations = int(raw_input('Maximum iterations [100-4000]?\n'))
 
-max_iterations = comm.bcast(max_iterations, root=0)
+# broadcast input to other ranks <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+iteration = 1
 
 if rank == 0:
     start_time = time()
 
-# initialize
-Temperature_last = np.zeros(shape)
-
-if rank == 0:
-    Temperature_last[:-1, -1] = (
-        (100.0/ROWS)*np.r_[START_ROW:END_ROW+1]
-    )
-else:
-    Temperature_last[1:-1, -1] = (
-        (100.0/ROWS)*np.r_[START_ROW+1:END_ROW+1]
-    )
-
-if rank == size - 1:
-    Temperature_last[-1, :] = (100.0/COLUMNS)*np.r_[:COLUMNS + 2]
+# initialize Temperature and Temperature_last <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 # do until error is minimal or until max steps
-first_iteration = True
 while ( global_dt[0] > MAX_TEMP_ERROR and iteration <= max_iterations ):
-    # 1D ring exchange
-    top_send_request = None
-    bottom_send_request = None
-
-    if rank != 0:
-        top_send_request = comm.Isend(
-            [Temperature_last[1, :], MPI.DOUBLE],
-            dest=rank - 1
-        )
-
-    if rank != size - 1:
-        bottom_send_request = comm.Isend(
-            [Temperature_last[-2, :], MPI.DOUBLE],
-            dest=rank + 1
-        )
-
-    if rank != 0:
-        comm.Recv(
-            [Temperature_last[0, :], MPI.DOUBLE],
-            source=rank - 1
-        )
-
-    if rank != size - 1:
-        comm.Recv(
-            [Temperature_last[-1, :], MPI.DOUBLE],
-            source=rank + 1
-        )
-
-    if first_iteration:
-        Temperature = Temperature_last.copy()
-        first_iteration = False
+    # exchange boundary rows between adjacent ranks <<<<<<<<<<<<<<<<<<<<<<<<<<
 
     # main calculation: average my four neighbors
     Temperature[1:-1, 1:-1] = 0.25*(
@@ -98,14 +55,11 @@ while ( global_dt[0] > MAX_TEMP_ERROR and iteration <= max_iterations ):
         Temperature_last[1:-1,  :-2]
     )
 
-    # the fact that mpi4py on bw doesn't have Iallreduce makes me sad :(
-    local_dt[0] = np.max(np.fabs(
-        Temperature[1:-1, 1:-1] - Temperature_last[1:-1, 1:-1]
-    ))
-    comm.Allreduce(local_dt, global_dt, op=MPI.MAX)
+    # compute local_dt[0] = maximum local difference <<<<<<<<<<<<<<<<<<<<<<<<<
 
-    # copy grid to old grid for next iteration
-    Temperature_last[:] = Temperature
+    # parallel reduction of local_dt <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+    # copy grid to old grid for next iteration <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     # periodically print test values
     if iteration % 100 == 0:
@@ -116,9 +70,7 @@ while ( global_dt[0] > MAX_TEMP_ERROR and iteration <= max_iterations ):
                 (START_ROW <= i and i < END_ROW) or
                 (i == END_ROW and END_ROW == ROWS and rank == size - 1)
             ):
-                gather_data.append([
-                    i, Temperature[i - START_ROW, i]
-                ])
+                gather_data.append([i, Temperature[i - START_ROW, i]])
 
         gather_data = comm.gather(gather_data, root=0)
 
@@ -127,10 +79,10 @@ while ( global_dt[0] > MAX_TEMP_ERROR and iteration <= max_iterations ):
 
             print('---------- Iteration number: %d ------------' % iteration)
             for i, value in gather_data:
-                sys.stdout.write('[%d,%d]: %5.2f  ' % (i, i, value))
+                stdout.write('[%d,%d]: %5.2f  ' % (i, i, value))
 
-            sys.stdout.write('\n')
-            sys.stdout.flush()
+            stdout.write('\n')
+            stdout.flush()
 
     iteration += 1
 
