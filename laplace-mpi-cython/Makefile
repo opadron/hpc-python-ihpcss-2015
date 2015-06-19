@@ -21,5 +21,8 @@ run: build
 	echo 3400 | $(LAUNCHER) $(LAUNCHER_FLAGS) ./laplace_mpi_cython
 
 clean:
-	rm -f laplace_mpi_cython.c laplace_mpi_cython.o laplace_mpi_cython
+	rm -f laplace_mpi_cython.c    \
+	      laplace_mpi_cython.o    \
+	      laplace_mpi_cython.html \
+	      laplace_mpi_cython
 

@@ -1,0 +1,8 @@
+#! /usr/bin/env bash
+
+qsub -I                   \
+    -l walltime=4:00:00   \
+    -l nodes=4:ppn=32:xe  \
+    -l advres=hpcsummerxe \
+    -N IHPCSSPython-$USER
+

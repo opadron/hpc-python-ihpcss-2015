@@ -1,9 +1,7 @@
 #! /usr/bin/env python
 
-import math
-import sys
-
 from time import time
+from sys import stdout
 from math import pi, sqrt, fabs
 
 import numpy as np
@@ -16,6 +14,7 @@ num_left_over_iterations = N % update_frequency
 
 start_time = time()
 
+# initialize array <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 array = np.empty((update_frequency,))
 
 partial_sum = 0.0
@@ -24,9 +23,11 @@ range_start = 1
 range_stop = range_start + update_frequency
 
 for i in xrange(num_iterations):
+    # main array computation <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     array[:] = np.arange(range_start, range_stop)
-    array[:] = 1.0/(array*array)
+    array[:] = (1.0/array)/array
 
+    # compute partial sum <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     partial_sum += np.sum(array)
 
     range_start += update_frequency
@@ -35,25 +36,24 @@ for i in xrange(num_iterations):
     partial_result = sqrt(6*partial_sum)
     partial_error = fabs(pi - partial_result)
     print('partial error: %e' % partial_error)
-    sys.stdout.flush()
+    stdout.flush()
 
 if num_left_over_iterations > 0:
-    slice = Slice(None, num_left_over_iterations)
-    array[slice] = np.arange(
-        range_start,
-        range_start + num_left_over_iterations
-    )
+    # left over array computation <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    nloi = num_left_over_iterations
+    array[:nloi] = np.arange(range_start, range_start + nloi)
 
-    array[slice] = 1.0/(array[slice]*array[slice])
-    partial_sum += np.sum(array[slice])
+    array[:nloi] = ( 1.0/array[:nloi] )/array[:nloi]
+
+    # left over partial sum <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    partial_sum += np.sum(array[:nloi])
 
 stop_time = time()
-
 elapsed_time = stop_time - start_time
 
 partial_result = sqrt(6*partial_sum)
 partial_error = fabs(pi - partial_result)
 
-print('\nMax error with %d terms was %e' % (N, partial_error))
+print('\nPartial error after %d terms was %e' % (N, partial_error))
 print('Total time was %f seconds.\n' % elapsed_time)
 

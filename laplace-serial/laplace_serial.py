@@ -1,19 +1,18 @@
 #! /usr/bin/env python
 
-import math
-import sys
-
-import itertools as it
-
-from array import array
+from sys import stdout
 from time import time
+from math import fabs
 
-COLUMNS = 1000
-ROWS = 1000
+COLUMNS    =              1000
+COLUMNS_P1 = COLUMNS    +    1
+COLUMNS_P2 = COLUMNS_P1 +    1
+
+ROWS       =              1000
+ROWS_P1    = ROWS       +    1
+ROWS_P2    = ROWS_P1    +    1
 
 MAX_TEMP_ERROR = 0.01
-
-num_elements = (COLUMNS + 2)*(ROWS + 2)
 
 iteration = 1
 dt = 100
@@ -23,59 +22,42 @@ max_iterations = int(raw_input('Maximum iterations [100-4000]?\n'))
 start_time = time()
 
 # initialize
-Temperature_last = array('d', it.repeat(0.0, num_elements))
+Temperature_last = [
+    [ 0.0 for i in range(COLUMNS_P2) ]
+    for j in range(ROWS_P2)
+]
 
-# not necessary -- arrays already initialized to 0.0
-# Temperature_last[::COLUMNS + 2] = array('d', it.repeat(0.0, ROWS + 2))
+Temperature = [
+    [ 0.0 for i in range(COLUMNS_P2) ]
+    for j in range(ROWS_P2)
+]
 
-Temperature_last[COLUMNS + 1::COLUMNS + 2] = array(
-    'd',
-    ((100.0/ROWS)*i for i in range(ROWS + 2))
-)
+for i in range(ROWS_P2):
+    Temperature_last[i][-1] = (100.0/ROWS)*i
 
-# not necessary -- arrays already initialized to 0.0
-# Temperature_last[:COLUMNS + 2] = array('d', it.repeat(0.0, ROWS + 2))
-
-start_index = (ROWS + 1)*(COLUMNS + 2)
-end_index = start_index + COLUMNS + 2
-
-Temperature_last[start_index:end_index] = array(
-    'd',
-    ((100.0/COLUMNS)*j for j in range(COLUMNS + 2))
-)
-
-Temperature = array('d', Temperature_last)
+for j in range(COLUMNS_P1):
+    Temperature_last[-1][j] = (100.0/COLUMNS)*j
 
 # do until error is minimal or until max steps
 while ( dt > MAX_TEMP_ERROR and iteration <= max_iterations ):
+    dt = 0.0
+
     # main calculation: average my four neighbors
-    for i in range(1, ROWS + 1):
-        start_index = i*(COLUMNS + 2) + 1
-        end_index = start_index + COLUMNS
-
-        Temperature[start_index:end_index] = array('d', (
-            0.25*(
-                Temperature_last[(i + 1)*(COLUMNS + 2) + j    ] +
-                Temperature_last[(i - 1)*(COLUMNS + 2) + j    ] +
-                Temperature_last[(i    )*(COLUMNS + 2) + j + 1] +
-                Temperature_last[(i    )*(COLUMNS + 2) + j - 1]
+    for i in range(1, ROWS_P1):
+        for j in range(1, COLUMNS_P1):
+            Temperature[i][j] = 0.25*(
+                Temperature_last[i + 1][j    ] +
+                Temperature_last[i - 1][j    ] +
+                Temperature_last[i    ][j + 1] +
+                Temperature_last[i    ][j - 1]
             )
-            for j in range(1, COLUMNS + 1)
-        ))
 
-    dt = max(
-        max(
-            math.fabs(
-                Temperature[i*(COLUMNS + 2) + j] -
-                Temperature_last[i*(COLUMNS + 2) + j]
-            )
-            for j in range(1, COLUMNS + 1)
-        )
-        for i in range(1, ROWS + 1)
-    )
+            dt = max(dt, fabs(Temperature[i][j] - Temperature_last[i][j]))
 
     # copy grid to old grid for next iteration
-    Temperature_last[:] = Temperature
+    for i in range(1, ROWS_P1):
+        for j in range(1, COLUMNS_P1):
+            Temperature_last[i][j] = Temperature[i][j]
 
     # periodically print test values
     if iteration % 1 == 0:
@@ -83,14 +65,10 @@ while ( dt > MAX_TEMP_ERROR and iteration <= max_iterations ):
         print('---------- Iteration number: %d ------------' % iteration)
 
         for i in range(ROWS - 5, ROWS + 1):
-            sys.stdout.write(
-                '[%d,%d]: %5.2f  ' % (
-                    i, i, Temperature[i*(COLUMNS + 2) + i]
-                )
-            )
+            stdout.write('[%d,%d]: %5.2f  ' % (i, i, Temperature[i][i]))
 
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        stdout.write('\n')
+        stdout.flush()
 
     iteration += 1
 

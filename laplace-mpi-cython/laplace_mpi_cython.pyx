@@ -1,7 +1,8 @@
 
-import sys
-import itertools as it
+from sys import stdout
 from time import time
+
+import itertools as it
 
 from libc.math cimport fabs, fmax
 
@@ -12,61 +13,29 @@ from mpi4py import MPI
 from mpi4py cimport MPI
 from mpi4py.mpi_c cimport *
 
-# cdef inline debug_array(np.ndarray[double, ndim=2] x, MPI_Comm comm):
-#     cdef int rank, size
-#     cdef int garbage
-#     cdef MPI_Status stat
-# 
-#     MPI_Comm_size(comm, &size)
-#     MPI_Comm_rank(comm, &rank)
-# 
-#     cdef unsigned int i
-# 
-#     for i in range(size):
-#         MPI_Barrier(comm)
-#         if rank == i:
-#             if rank == 0:
-#                 print
-#                 print '='*20
-#                 print
-# 
-#             print x
-# 
-#             if rank == size - 1:
-#                 print
-#                 print '='*20
-#                 print
-# 
-#             sys.stdout.flush()
-
 def main():
-    cdef unsigned int COLUMNS = 1000
-    cdef unsigned int ROWS = 1000
-    # COLUMNS = 10
-    # ROWS = 10
-    cdef unsigned int COLUMNS_P1 = COLUMNS + 1
-    cdef unsigned int ROWS_P1 = ROWS + 1
-    cdef unsigned int COLUMNS_P2 = COLUMNS + 2
-    cdef unsigned int ROWS_P2 = ROWS + 2
+    cdef unsigned int COLUMNS    =              1000
+    cdef unsigned int COLUMNS_P1 = COLUMNS    +    1
+    cdef unsigned int COLUMNS_P2 = COLUMNS_P1 +    1
 
     cdef unsigned int i, j
 
     cdef MPI_Comm comm = MPI_COMM_WORLD
+    cdef MPI_Status stat
 
     cdef int rank, size
     MPI_Comm_size(comm, &size)
     MPI_Comm_rank(comm, &rank)
 
-    cdef unsigned int START_ROW = (ROWS*rank)//size
-    cdef unsigned int END_ROW = (ROWS*(rank + 1))//size
-    cdef unsigned int LOCAL_ROWS = END_ROW - START_ROW
+    cdef unsigned int ROWS       = 1000
+    cdef unsigned int START_ROW  = (ROWS*rank       )//size
+    cdef unsigned int END_ROW    = (ROWS*rank + ROWS)//size
+
+    cdef unsigned int LOCAL_ROWS    = END_ROW - START_ROW
+    cdef unsigned int LOCAL_ROWS_P1 = LOCAL_ROWS    + 1
+    cdef unsigned int LOCAL_ROWS_P2 = LOCAL_ROWS_P1 + 1
 
     cdef double MAX_TEMP_ERROR = 0.01
-
-    shape = (LOCAL_ROWS + 2, COLUMNS + 2)
-
-    cdef unsigned int iteration = 1
-
     cdef double local_dt, global_dt = 1.1*MAX_TEMP_ERROR
 
     cdef int max_iterations
@@ -75,32 +44,30 @@ def main():
             raw_input('Maximum iterations [100-4000]?\n'
         ))
 
+    # broadcast input to other ranks <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     MPI_Bcast(&max_iterations, 1, MPI_INT, 0, comm)
+
+    cdef unsigned int iteration = 1
 
     cdef double start_time
     if rank == 0:
         start_time = time()
 
-    # initialize
-    cdef np.ndarray[double, ndim=2] Temperature_last = np.zeros(shape)
+    # initialize Temperature and Temperature_last <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    cdef np.ndarray[double, ndim=2] Temperature_last = (
+        np.zeros((LOCAL_ROWS_P2, COLUMNS_P2))
+    )
+
     cdef np.ndarray[double, ndim=2] Temperature = (
         np.empty_like(Temperature_last)
     )
-
-    cdef MPI_Status stat
-
-    # not necessary -- arrays already initialized to 0.0
-    Temperature_last[:, 0] = 0.0
 
     cdef unsigned int start_index = 1
     if rank == 0:
         start_index = 0
 
-    for i in xrange(start_index, LOCAL_ROWS + 1):
+    for i in xrange(start_index, LOCAL_ROWS_P1):
         Temperature_last[i, COLUMNS_P1] = (100.0/ROWS)*(i + START_ROW)
-
-    # not necessary -- arrays already initialized to 0.0
-    # Temperature_last[0, :] = 0.0
 
     if rank == size - 1:
         for j in xrange(COLUMNS_P2):
@@ -110,7 +77,7 @@ def main():
 
     # do until error is minimal or until max steps
     while ( global_dt > MAX_TEMP_ERROR and iteration <= max_iterations ):
-        # 1D ring exchange
+        # exchange boundary rows between adjacent ranks <<<<<<<<<<<<<<<<<<<<<<
         if rank != 0:
             MPI_Isend(
                 &Temperature_last[1, 0],
@@ -146,7 +113,7 @@ def main():
         local_dt = 0.0
 
         # main calculation: average my four neighbors
-        for i in xrange(1, LOCAL_ROWS + 1):
+        for i in xrange(1, LOCAL_ROWS_P1):
             for j in xrange(1, COLUMNS_P1):
                 Temperature[i, j] = 0.25*(
                     Temperature_last[i+1, j  ] +
@@ -160,11 +127,11 @@ def main():
                     fabs(Temperature[i, j] - Temperature_last[i, j]
                 ))
 
-        # the fact that mpi4py on bw doesn't have Iallreduce makes me sad :(
+        # parallel reduction of local_dt <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         MPI_Allreduce(&local_dt, &global_dt, 1, MPI_DOUBLE, MPI_MAX, comm)
 
-        # copy grid to old grid for next iteration
-        for i in range(1, LOCAL_ROWS + 1):
+        # copy grid to old grid for next iteration <<<<<<<<<<<<<<<<<<<<<<<<<<<
+        for i in range(1, LOCAL_ROWS_P1):
             for j in range(1, COLUMNS_P1):
                 Temperature_last[i, j] = Temperature[i, j]
 
@@ -188,10 +155,10 @@ def main():
 
                 print('---------- Iteration number: %d ------------' % iteration)
                 for _i, value in gather_data:
-                    sys.stdout.write('[%d,%d]: %5.2f  ' % (_i, _i, value))
+                    stdout.write('[%d,%d]: %5.2f  ' % (_i, _i, value))
 
-                sys.stdout.write('\n')
-                sys.stdout.flush()
+                stdout.write('\n')
+                stdout.flush()
 
         iteration += 1
 
