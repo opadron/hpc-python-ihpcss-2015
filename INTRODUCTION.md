@@ -8,26 +8,31 @@ Blue Waters Science and Engineering Application Support<br>
 
 ### Setup
 
-    ssh your_user_name@bwbay.ncsa.illinois.edu
-    # enter your password
-    
-    git clone git://github.com/opadron/hpc-python-ihpcss-2015
-    cd hpc-python-ihpcss-2015
-    source idev
-    # wait for your interactive job to start
-    
-    cd $PBS_O_WORKDIR
-    source environment
+ - sign up for a free account on [wakari](http://wakari.io)
+ - log in -> "Terminals" tab -> Dropdown menu -> "Shell" -> "+Tab" button
+ - add the following to your ~/.bashrc file
 
-You should get two lines of output telling you the version of python loaded.
-The phrase "Blue Waters" should be highlighted.
+```bash
+export PYTHONHOME="/opt/anaconda"
+export PATH="/opt/anaconda/bin:$PATH"
+```
 
-    
-    Python 2.7.5 (default, Mar 12 2015, 11:35:48)
-    [GCC 4.8.2 20131016 (Cray Inc.)] on Blue Waters
-    
+ - grab the code and materials
+```bash
+git clone git://github.com/opadron/hpc-python-ihpcss-2015
+cd hpc-python-ihpcss-2015
+git checkout wakari
+```
 
-If you see the above output, then you are ready to go!
+ - install the packages that we'll need
+```bash
+echo y | conde install numpy cython mpi4py
+```
+
+If all goes well, you should be ready to go!
+
+**Note** that free wakari accounts are disconnected after 90 minutes, so you'll
+have to log in again.
 
 ### Python for HPC
  - Why Python?
