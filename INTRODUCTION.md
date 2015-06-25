@@ -26,7 +26,7 @@ git checkout wakari
 
  - install the packages that we'll need
 ```bash
-echo y | conde install numpy cython mpi4py
+echo y | conda install numpy cython mpi4py
 ```
 
 If all goes well, you should be ready to go!
