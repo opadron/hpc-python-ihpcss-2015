@@ -1,9 +1,9 @@
 
 PYTHON:=python2
 
-ANACONDA_HOME:=/opt/anaconda
+ANACONDA_HOME:=$(HOME)/conda
 
-SITE_PACKAGES:=/opt/anaconda/lib/python2.7/site-packages
+SITE_PACKAGES:=$(ANACONDA_HOME)/lib/python2.7/site-packages
 NUMPY_INCLUDE:=$(SITE_PACKAGES)/numpy/core/include
 
 CYTHON:=cython
@@ -18,6 +18,8 @@ LDFLAGS:=-L$(ANACONDA_HOME)/lib
 LIBS:=-lm -lpython2.7
 
 export OMP_NUM_THREADS:=16
+export PYTHONHOME:=$(ANACONDA_HOME)
+export PATH:="$(ANACONDA_HOME)/bin:$(PATH)"
 
 LAUNCHER:=mpirun
 LAUNCHER_FLAGS:=-n $(NUM_NODES) -f ../hostfile
