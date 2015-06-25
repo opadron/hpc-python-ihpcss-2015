@@ -8,31 +8,37 @@ Blue Waters Science and Engineering Application Support<br>
 
 ### Setup
 
- - sign up for a free account on [wakari](http://wakari.io)
- - log in -> "Terminals" tab -> Dropdown menu -> "Shell" -> "+Tab" button
+ - Download and install the Python 2.7 version of
+   [miniconda](http://conda.pydata.org/miniconda.html)
+
+```bash
+cd $HOME
+mkdir conda
+cd conda
+wget $URL_TO_MINICONDA
+sh $MINICONDA_FILE -f -b -p $HOME/conda
+```
+
  - add the following to your ~/.bashrc file
 
 ```bash
-export PYTHONHOME="/opt/anaconda"
-export PATH="/opt/anaconda/bin:$PATH"
+export PYTHONHOME="$HOME/conda"
+export PATH="$HOME/conda/bin:$PATH"
 ```
 
  - grab the code and materials
 ```bash
 git clone git://github.com/opadron/hpc-python-ihpcss-2015
 cd hpc-python-ihpcss-2015
-git checkout wakari
+git checkout anaconda
 ```
 
  - install the packages that we'll need
 ```bash
-echo y | conde install numpy cython mpi4py
+echo y | conda install numpy cython mpi4py
 ```
 
 If all goes well, you should be ready to go!
-
-**Note** that free wakari accounts are disconnected after 90 minutes, so you'll
-have to log in again.
 
 ### Python for HPC
  - Why Python?
